@@ -1,8 +1,3 @@
-// Tema 1 LFC - Construirea unui AFD pentru o expresie regulata
-// Operatori: '|' (reuniune), '*' (stelare), concatenarea (implicita, sau '.'), paranteze.
-// Cuvantul vid este reprezentat prin caracterul LAMBDA (implicit '@').
-// Compilare: g++ -std=c++17 -O2 -o tema1 tema1.cpp
-// Rulare:    ./tema1 [fisier_intrare] [fisier_iesire]
 
 #include <algorithm>
 #include <fstream>
@@ -34,7 +29,7 @@ public:
     int initialState = 0;            // q0
     set<int> finalStates;            // F
 
-    // starea initiala in Q, F inclus in Q, delta foloseste doar simboluri din Sigma si stari din Q
+
     bool VerifyAutomaton() const {
         if (!states.count(initialState)) return false;
         for (int f : finalStates)
@@ -79,7 +74,7 @@ public:
 };
 using DFA = DeterministicFiniteAutomaton;
 
-// ------------------------------------------------------------------ arbore sintactic
+
 struct Node;
 using NodePtr = shared_ptr<Node>;
 struct Node {
@@ -96,9 +91,9 @@ bool SameTree(const NodePtr& a, const NodePtr& b) {
     return a->val == b->val && SameTree(a->left, b->left) && SameTree(a->right, b->right);
 }
 
-// ------------------------------------------------------------------ (a) regex -> postfix
+//(a) regex -> postfix
 string RegexToPostfix(const string& r) {
-    // 1. inserarea explicita a concatenarii
+    
     string t;
     for (char c : r) {
         if (isspace(static_cast<unsigned char>(c))) continue;
@@ -110,7 +105,7 @@ string RegexToPostfix(const string& r) {
         }
         t += c;
     }
-    // 2. algoritmul shunting-yard ('*' este operator unar postfixat, de prioritate maxima)
+
     string out;
     stack<char> st;
     for (char c : t) {
@@ -135,7 +130,7 @@ string RegexToPostfix(const string& r) {
     return out;
 }
 
-// ------------------------------------------------------------------ (b) postfix -> arbore
+// (b) postfix -> arbore
 NodePtr PostfixToSyntaxTree(const string& postfix) {
     stack<NodePtr> st;
     for (char c : postfix) {
@@ -156,7 +151,7 @@ NodePtr PostfixToSyntaxTree(const string& postfix) {
     return st.top();
 }
 
-// ------------------------------------------------------------------ (c) simplificare (bottom-up, arbore nou)
+//  (c) simplificare 
 NodePtr SimplifySyntaxTree(const NodePtr& n) {
     if (!n) return nullptr;
     if (!n->left && !n->right) return make_shared<Node>(n->val);
@@ -184,7 +179,7 @@ NodePtr SimplifySyntaxTree(const NodePtr& n) {
         return make_shared<Node>('.', a, b);
     }
 
-    // reuniune
+
     if (SameTree(a, b)) return a;                                   // r | r = r
     if (IsLambdaLeaf(a) && IsStar(b)) return b;                     // lambda | r* = r*
     if (IsLambdaLeaf(b) && IsStar(a)) return a;
@@ -193,18 +188,18 @@ NodePtr SimplifySyntaxTree(const NodePtr& n) {
     return make_shared<Node>('|', a, b);
 }
 
-// ------------------------------------------------------------------ (d) arbore -> postfix (postordine)
+//  (d) arbore -> postfix (postordine)
 string SyntaxTreeToPostfix(const NodePtr& n) {
     if (!n) return "";
     return SyntaxTreeToPostfix(n->left) + SyntaxTreeToPostfix(n->right) + n->val;
 }
 
-// ------------------------------------------------------------------ parcurgeri / afisare arbore
+//parcurgeri / afisare arbore
 string Preorder(const NodePtr& n) {
     if (!n) return "";
     return string(1, n->val) + Preorder(n->left) + Preorder(n->right);
 }
-string Inorder(const NodePtr& n) {  // subexpresiile binare sunt parantezate pentru a evita ambiguitatea
+string Inorder(const NodePtr& n) {  
     if (!n) return "";
     if (!n->left && !n->right) return string(1, n->val);
     if (n->val == '*') return Inorder(n->left) + "*";
@@ -235,11 +230,11 @@ void PrintTree(const string& name, const NodePtr& t) {
     cout << "  Postordine: " << Postorder(t) << "\n\n";
 }
 
-// ------------------------------------------------------------------ (e) postfix -> lambda-NFA (Thompson)
+// (e) postfix -> lambda-NFA 
 struct LambdaNFA {
     int numStates = 0;
-    set<char> alphabet;                 // fara LAMBDA
-    map<pair<int, char>, set<int>> delta;  // tranzitiile pe LAMBDA folosesc cheia LAMBDA
+    set<char> alphabet;                 
+    map<pair<int, char>, set<int>> delta;  
     int start = 0, final = 0;
     int NewState() { return numStates++; }
     void Add(int from, char c, int to) { delta[{from, c}].insert(to); }
@@ -252,7 +247,7 @@ LambdaNFA PostfixToLambdaNFA(const string& postfix) {
     for (char c : postfix) {
         if (IsSymbol(c)) {
             int s = nfa.NewState(), f = nfa.NewState();
-            nfa.Add(s, c, f);  // pentru LAMBDA devine o tranzitie lambda
+            nfa.Add(s, c, f);  
             if (c != LAMBDA) nfa.alphabet.insert(c);
             st.push({ s, f });
         }
@@ -273,7 +268,7 @@ LambdaNFA PostfixToLambdaNFA(const string& postfix) {
             nfa.Add(a.f, LAMBDA, b.s);
             st.push({ a.s, b.f });
         }
-        else {  // '|'
+        else {  
             if (st.size() < 2) throw runtime_error("Postfix invalid");
             Frag b = st.top(); st.pop();
             Frag a = st.top(); st.pop();
@@ -291,7 +286,7 @@ LambdaNFA PostfixToLambdaNFA(const string& postfix) {
     return nfa;
 }
 
-// ------------------------------------------------------------------ (f) lambda-NFA -> AFD (constructia submultimilor)
+// (f) lambda-NFA -> AFD (constructia submultimilor)
 set<int> LambdaClosure(const LambdaNFA& nfa, const set<int>& init) {
     set<int> res = init;
     stack<int> st;
@@ -328,7 +323,7 @@ DFA LambdaNFAToDFA(const LambdaNFA& nfa) {
                 auto it = nfa.delta.find({ s, c });
                 if (it != nfa.delta.end()) mv.insert(it->second.begin(), it->second.end());
             }
-            // multimea vida devine starea "sink" (cu tranzitii in ea insasi)
+
             int to = getId(LambdaClosure(nfa, mv));
             dfa.delta[{(int)i, c}] = to;
         }
@@ -340,7 +335,7 @@ DFA LambdaNFAToDFA(const LambdaNFA& nfa) {
     return dfa;
 }
 
-// ------------------------------------------------------------------ regex -> AFD
+
 DFA RegexToDFA(const string& r, bool simplify) {
     string fp = RegexToPostfix(r);
     if (simplify) {
@@ -352,7 +347,7 @@ DFA RegexToDFA(const string& r, bool simplify) {
     return LambdaNFAToDFA(nfa);
 }
 
-// ------------------------------------------------------------------ main
+
 int main() {
     string inFile = "regex.txt";
     string outFile = "automat.txt";

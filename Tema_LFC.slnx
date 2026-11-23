@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="Tema_LFC/Tema_LFC.vcxproj" />
+  <Project Path="Tema_LFC/Tema_LFC.vcxproj" Id="e0e2a8c3-70a5-49df-a362-3dc46e1b177a" />
 </Solution>
